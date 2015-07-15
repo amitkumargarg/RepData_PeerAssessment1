@@ -29,8 +29,21 @@ data_tbl %>% group_by(date)  %>% summarise(totalsteps=sum(steps)) %>% print %>% 
 #Calculate and report the mean and median of the total number of steps taken per day
 summarytable1=data_tbl %>% group_by(date)  %>% summarise(Entries_per_day=n(),totalsteps=sum(steps),totalsteps_mean=mean(steps),totalsteps_median=median(steps)) %>% print
 
+
+
 ```
 
+### As there is some confusion in the question about the mean and median total number of steps per day, I am reporting both options as table(see above) and as single values for mean and median(below)
+
+```{r, echo=TRUE}
+ggplot(summarytable1,aes(totalsteps)) + geom_histogram(binwidth = 3000) + ggtitle("Histogram of Total number of steps taken per day")+ scale_y_discrete(breaks = seq(0,30,2))+ theme_gdocs() + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+#### Calculate and report the mean and median of the total number of steps taken per day
+mean_of_totalsteps= as.integer(mean(summarytable1$totalsteps))
+median_of_totalsteps= as.integer(median(summarytable1$totalsteps))
+```
+
+mean of totalsteps= `r mean_of_totalsteps`  
+median of totalsteps= `r median_of_totalsteps`
 
 ## What is the average daily activity pattern?
 ```{r,echo=TRUE}
@@ -61,9 +74,10 @@ total_na_rows= nrow(unprocesseddata[is.na(unprocesseddata$steps),])
 ```
 #### Total number of rows with NAs= `r  total_na_rows`
 
+#### Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.    
+
+####  My strategy is to use the mean steps (across all days) in that interval .
 ```{r,echo=TRUE}
-#Devise a strategy for filling in all of the missing values in the dataset. The strategy does not #need to be sophisticated. For example, you could use the mean/median for that day, or the mean for #that 5-minute interval, etc.
-#My strategy is to use the mean steps (across all days) in that interval .
 
 interval_mean_tbl=data_tbl %>% group_by(interval) %>% summarise(AveragedSteps=mean(steps))
 interval_mean_tbl=interval_mean_tbl %>% mutate(AveragedSteps=floor(AveragedSteps))
@@ -78,7 +92,6 @@ rm(newdata)
 print(head(newdatafinal))
 #Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
 
-
 summarytable2=newdatafinal %>% group_by(date)  %>% summarise(Entries_per_day=n(),totalsteps=sum(steps),totalsteps_mean=mean(steps),totalsteps_median=median(steps)) %>% print
 
 ggU=ggplot(summarytable1,aes(date,totalsteps))+ geom_point(aes(y=totalsteps,colour=totalsteps))
@@ -90,11 +103,26 @@ ggP=ggP+theme_gdocs() +theme(axis.text.x=element_text(angle=-270))+ggtitle("Plot
 ggP=ggP + geom_line(aes(y=totalsteps, group=1))
 plot(ggP)
 
-
 ```
 
 ####  New dataset with with the missing data filled in is "newdatafinal"  
-####  So effect for imputing missing data is mainly on the (eg firstday/last day)  days that had all the NAs. rest of the days did not show any significant effect.
+####  So effect for imputing missing data is mainly on the (eg firstday/last day)  days that had all the NAs. rest of the days did not show any significant effect. as clear from the graph  
+
+### same as mentioned earlier I am reporting the both options of total steps per day 
+
+```{r,echo=TRUE}
+
+ggplot(summarytable2,aes(totalsteps)) + geom_histogram(binwidth = 3000) + ggtitle("Histogram of Total number of steps taken per day")+ scale_y_discrete(breaks = seq(0,30,2))+ theme_gdocs() + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+#### Calculate and report the mean and median of the total number of steps taken per day after filling missing data
+new_mean_of_totalsteps= as.integer(mean(summarytable2$totalsteps))
+new_median_of_totalsteps= as.integer(median(summarytable2$totalsteps))
+```
+
+mean of totalsteps= `r new_mean_of_totalsteps`  
+median of totalsteps= `r new_median_of_totalsteps`  
+
+####  There is very slight change in mean and median after filling the missing data. 
+
 
 ## Are there differences in activity patterns between weekdays and weekends?
 ```{r echo=TRUE}
