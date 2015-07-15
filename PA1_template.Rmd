@@ -1,25 +1,114 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+output: html_document
+keep_md: true
 ---
-
-
+```{r, message=FALSE}
+library("knitr")
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(lattice)
+opts_chunk$set(fig.width=10, fig.height=5, fig.path ="figure/")
+```
 ## Loading and preprocessing the data
+```{r, echo=TRUE}
+unprocesseddata <- read.csv(unz("activity.zip", "activity.csv"))
+data_tbl=tbl_df(unprocesseddata[!is.na(unprocesseddata$steps),])
+print(head(data_tbl))
+```
 
 
 
 ## What is mean total number of steps taken per day?
+```{r, echo=TRUE}
 
+#Calculate the total number of steps taken per day
+data_tbl %>% group_by(date)  %>% summarise(totalsteps=sum(steps)) %>% print %>% ggplot(aes(date,totalsteps)) + geom_bar(stat = "identity") + ggtitle("Total number of steps taken per day") + theme_gdocs() + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+#Calculate and report the mean and median of the total number of steps taken per day
+summarytable1=data_tbl %>% group_by(date)  %>% summarise(Entries_per_day=n(),totalsteps=sum(steps),totalsteps_mean=mean(steps),totalsteps_median=median(steps)) %>% print
+
+```
 
 
 ## What is the average daily activity pattern?
+```{r,echo=TRUE}
+#Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+interval_tbl=data_tbl %>% group_by(interval) %>% summarise(AveragedSteps = mean(steps)) %>% 
+  print
 
+interval_with_max_steps=interval_tbl[interval_tbl$AveragedSteps==max(interval_tbl$AveragedSteps),]
 
+#Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+gg=ggplot(interval_tbl,aes(interval,AveragedSteps)) 
+gg=gg + geom_point(aes(y=AveragedSteps,colour=AveragedSteps)) 
+gg=gg + theme_gdocs() + geom_line(aes(y=AveragedSteps, group=1)) 
+gg=gg + scale_x_discrete(breaks = seq(0, 2355, by = 200)) 
+gg=gg + ggtitle("Averagesteps (across all the days) in 5 mins interval") 
+gg=gg +geom_text(data = interval_with_max_steps, aes(x = interval , y = AveragedSteps, label = "MaxStep"))
+plot(gg)                                                                                                                                                
+
+```
+####  Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps? = `r interval_with_max_steps`
 
 ## Imputing missing values
+```{r,echo=TRUE}
+#Calculate and report the total number of missing values in the dataset (i.e. the total number of #rows with NAs)
+
+total_na_rows= nrow(unprocesseddata[is.na(unprocesseddata$steps),])
+```
+#### Total number of rows with NAs= `r  total_na_rows`
+
+```{r,echo=TRUE}
+#Devise a strategy for filling in all of the missing values in the dataset. The strategy does not #need to be sophisticated. For example, you could use the mean/median for that day, or the mean for #that 5-minute interval, etc.
+#My strategy is to use the mean steps (across all days) in that interval .
+
+interval_mean_tbl=data_tbl %>% group_by(interval) %>% summarise(AveragedSteps=mean(steps))
+interval_mean_tbl=interval_mean_tbl %>% mutate(AveragedSteps=floor(AveragedSteps))
+ungroup(interval_mean_tbl)
+#Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+newdata=left_join(unprocesseddata,interval_mean_tbl)
+
+newdatafinal=newdata %>% mutate(newsteps=ifelse(is.na(newdata$steps),newdata$AveragedSteps,newdata$steps)) %>% select(newsteps,date,interval) %>%  rename(steps=newsteps) 
+rm(newdata)
+
+print(head(newdatafinal))
+#Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
 
 
+summarytable2=newdatafinal %>% group_by(date)  %>% summarise(Entries_per_day=n(),totalsteps=sum(steps),totalsteps_mean=mean(steps),totalsteps_median=median(steps)) %>% print
+
+ggU=ggplot(summarytable1,aes(date,totalsteps))+ geom_point(aes(y=totalsteps,colour=totalsteps))
+ggU=ggU+theme_gdocs() +theme(axis.text.x=element_text(angle=-270))+ggtitle("Plot of the total number of steps taken each day from Unprocessdata ")
+ggU=ggU + geom_line(aes(y=totalsteps, group=1))
+plot(ggU)
+ggP=ggplot(summarytable2,aes(date,totalsteps))+ geom_point(aes(y=totalsteps,colour=totalsteps))
+ggP=ggP+theme_gdocs() +theme(axis.text.x=element_text(angle=-270))+ggtitle("Plot of the total number of steps taken each day from Processdata ")
+ggP=ggP + geom_line(aes(y=totalsteps, group=1))
+plot(ggP)
+
+
+```
+
+####  New dataset with with the missing data filled in is "newdatafinal"  
+####  So effect for imputing missing data is mainly on the (eg firstday/last day)  days that had all the NAs. rest of the days did not show any significant effect.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r echo=TRUE}
+
+weekdays <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+
+newdatafinal$weekday <- factor((weekdays(as.Date(newdatafinal$date)) %in% weekdays), 
+         levels=c(FALSE, TRUE), labels=c('weekend', 'weekday')) 
+
+newdatafinal_summary= newdatafinal %>% group_by(weekday,interval) %>% summarise(steps =mean(steps))
+
+xyplot( steps ~ interval | weekday , data=newdatafinal_summary, type="l",layout=c(1,2),xlab="interval",ylab="Number of steps")
+
+```
+  
+####  There are some visible differences between weekdays and weeken activities.
+
